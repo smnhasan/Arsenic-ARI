@@ -1,0 +1,799 @@
+
+******************************************************************************** 
+*2019
+********************************************************************************
+
+clear
+*directory
+cd "E:\ResearchProject\Jamal Sir\Arsenic ARI\Bangladesh MICS6 SPSS Datasets"
+
+******************************************************************************** 
+*DATA MERGE 
+********************************************************************************
+
+use "wm" , clear
+sort HH1 HH2 LN
+save "wm" , replace
+
+use "bh" , clear
+sort HH1 HH2 LN
+save "bh" , replace
+
+use "hh" , clear
+sort HH1 HH2
+save "hh" , replace
+
+use "ch" , clear
+sort HH1 HH2 LN
+save "ch" , replace
+
+merge using wm.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+merge using hh.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+merge using bh.dta
+tab _merge
+keep if _merge == 3
+save "ch" , replace
+drop _merge
+
+********************************************************************************
+*WEIGHT, STRATA, CLUSTER VARIABLE FOR THE APPENDED DATA
+********************************************************************************
+gen wgt=chweight
+svyset [pw=wgt],psu(HH1) strata(stratum)
+
+********************************************************************************
+*Inclusion and Exclusion
+********************************************************************************
+*keep only 3 and 4 years of children (exclude children under 3 years)
+*keep if UB2>=3
+*svy: tab UB2
+
+
+********************************************************************************
+*ARSENIC
+********************************************************************************
+
+tab WQ12A
+gen ARS = .
+replace  ARS    = 1 if (WQ12A <= 10)
+replace  ARS    = 2 if (WQ12A > 10 & WQ12A <= 50) 
+replace  ARS    = 2 if (WQ12A > 50 & WQ12A <= 200) 
+replace  ARS    = 2 if (WQ12A > 200 & WQ12A <= 1000) 
+label define ARS 1 "Low" 2 "High"
+tab ARS
+drop if ARS == .
+tab ARS
+svy: tab ARS
+
+
+********************************************************************************
+*ARI
+********************************************************************************
+
+tab CA16
+recode CA16 9 = .
+recode CA16 8 = .
+tab CA16
+generate ARI1    = 2
+replace  ARI1    = 1 if (CA16 == 1 & (CA18 == 1 | CA18 == 3)) 
+label define ARI1 1 "Yes" 2 "No"
+svy: tab ARI1
+
+tab ARS ARI1, row
+svy: tab ARS ARI1, row
+
+
+*Age.
+svy: tab UB2
+tab UB2 ARI1, row
+svy: tab UB2 ARI1, row
+
+*Residence.
+svy: tab HH6
+gen area1=HH6
+recode area1 1=1
+recode area1 2/4=2
+recode area1 5=3
+label define area1  1 "Rural" 2 "Urban" 3 "Tribal"
+label values area area1
+svy: tab area
+tab area ECDI_score, row
+svy: tab area ECDI_score, row
+
+*Division.
+svy: tab HH7
+tab HH7 ECDI_score, row
+svy: tab HH7 ECDI_score, row
+
+*Education.
+svy: tab melevel
+recode melevel 9=.
+svy: tab melevel
+tab melevel ECDI_score, row
+svy: tab melevel ECDI_score, row
+
+*Wealth index Status.
+svy: tab windex5
+recode windex5 0=.
+recode windex5 1/2=1
+recode windex5 3=2
+recode windex5 4/5=3
+label define windex5  1 "Poor" 2 "Middle" 3 "Rich"
+label values windex51 windex5
+tab wwindex51 ECDI_score, row
+svy: tab windex51 ECDI_score, row
+
+*Religion.
+svy: tab HC1A
+gen Religion1=HC1A
+recode Religion1 1=1
+recode Religion1 2/7=2
+recode Religion1 9=.
+label define Religion1 1 "Islam" 2 "Others"
+label values Religion Religion1
+svy: tab Religion
+tab Religion ECDI_score, row
+svy: tab Religion ECDI_score, row
+
+*household sex.
+svy: tab HHSEX
+tab HHSEX ECDI_score, row
+svy: tab HHSEX ECDI_score, row
+
+*ethnicity.
+svy: tab ethnicity
+tab ethnicity ECDI_score, row
+svy: tab ethnicity ECDI_score, row
+
+*child sex.
+svy: tab HL4
+tab HL4 ECDI_score, row
+svy: tab HL4 ECDI_score, row
+
+*C-section (NW).
+svy: tab MN21
+gen C_Section1=MN21
+recode C_Section1 1=1
+recode C_Section1 2=2
+recode C_Section1 9=.
+label define C_Section1 1 "Yes" 2 "No"
+label values C_Section C_Section1
+svy: tab C_Section
+tab C_Section ECDI_score, chi2
+svy: tab C_Section ECDI_score, row
+
+*Place of delivery (NW).
+svy: tab MN20
+gen Place_delivery1=MN20
+recode Place_delivery1 11/12=1
+recode Place_delivery1 21/26=2
+recode Place_delivery1 31/36=3
+recode Place_delivery1 96=.
+recode Place_delivery1 76=.
+recode Place_delivery1 99=.
+label define Place_delivery1 1 "Home" 2 "Public" 3 "Private"
+label values Place_delivery Place_delivery1
+svy: tab Place_delivery
+tab Place_delivery ECDI_score, chi2
+svy: tab Place_delivery ECDI_score, row
+
+*ANC (NW).
+svy: tab MN5
+gen ANC2=MN5
+recode ANC2 1/3=1
+recode ANC2 4/15=2
+label define ANC2 1 "less4" 2 "4above"
+svy: tab ANC2
+tab ANC2 ECDI_score, chi2
+svy: tab ANC2 ECDI_score, row
+
+*Birth Weight (NW).
+svy: tab MN34
+gen BW2=MN34
+recode BW2 0/2.499=1
+recode BW2 2.500/4.000=2
+recode BW2 4.001/6.000=3
+recode BW2 9.998=.
+recode BW2 9.999=.
+label define BW2 1 "LBW" 2 "NBW" 3 "HBW"
+svy: tab BW2
+tab BW2 ECDI_score, chi2 
+svy: tab BW2 ECDI_score, row
+
+*Mother Age.
+svy: tab WAGE
+gen WA2=WAGE
+recode WA2 1=1
+recode WA2 2/4=2
+recode WA2 5/7=3
+label define WA2 1 "15-19" 2 "20-34" 3 "35+"
+svy: tab WA2
+tab WA2 ECDI_score, row
+svy: tab WA2 ECDI_score, row
+
+*Birth order.
+svy: tab brthord
+gen BO1=brthord
+label values BO BO1
+svy: tab BO
+tab BO ECDI_score, row
+svy: tab BO ECDI_score, row
+
+*Early Childhood Disease.
+recode CA1 8=.
+recode CA1 9=.
+recode CA1 2=0
+recode CA14 8=.
+recode CA14 9=.
+recode CA14 2=0
+recode CA16 8=.
+recode CA16 9=.
+recode CA16 2=0
+gen ED3 = CA1 + CA14 + CA16
+recode ED3 0=0
+recode ED3 1/3=1
+svy: tab ED3
+gen ED1=ED3
+label define ED1 1 "Yes" 0 "No"
+svy: tab ED1
+tab ED1 ECDI_score, row
+svy: tab ED1 ECDI_score, row
+
+*Weight for Age underweight.
+tab WAZ2
+recode WAZ2 99.97 = .
+recode WAZ2 99.98 = .
+recode WAZ2 99.99 = .
+tab WAZ2
+generate underweight1    = .
+replace  underweight1    = 1 if (WAZ2 <= -2) 
+replace  underweight1   = 2 if (WAZ2 > -2) & (WAZ2 <.) 
+label define underweight1 1 "Yes" 2 "No"
+label values underweight underweight1
+svy: tab underweight
+tab underweight ECDI_score, row
+svy: tab underweight ECDI_score, row
+
+*Height for Age Stunned.
+tab HAZ2
+recode HAZ2 99.97 = .
+recode HAZ2 99.98 = .
+recode HAZ2 99.99 = .
+tab HAZ2
+generate Stunned1    = .
+replace  Stunned1    = 1 if (HAZ2 <= -2) 
+replace  Stunned1    = 2 if (HAZ2 > -2) & (HAZ2 <.) 
+label define Stunned1 1 "Yes" 2 "No"
+label values Stunned Stunned1
+svy: tab Stunned
+tab Stunned ECDI_score, row
+svy: tab Stunned ECDI_score, row
+
+*Weight for Age Wasted.
+tab WHZ2
+recode WHZ2 99.97 = .
+recode WHZ2 99.98 = .
+recode WHZ2 99.99 = .
+tab WHZ2
+generate Wasted1    = .
+replace  Wasted1    = 1 if (WHZ2 <= -2) 
+replace  Wasted1    = 2 if (WHZ2 > -2) & (WHZ2 <.) 
+label define Wasted1 1 "Yes" 2 "No"
+label values Wasted Wasted1
+svy: tab Wasted
+tab Wasted ECDI_score, row
+svy: tab Wasted ECDI_score, row
+
+*Weight for Age Overweight.
+generate Overweight1    = .
+replace  Overweight1    = 1 if (WHZ2 >= 2) 
+replace  Overweight1    = 2 if (WHZ2 < 2)
+label define Overweight1 1 "Yes" 2 "No"
+label values Overweight Overweight1
+svy: tab Overweight
+tab Overweight ECDI_score, row
+svy: tab Overweight ECDI_score, row
+
+*Body Mass Index.
+tab BMI
+recode BMI 99.97 = .
+recode BMI 99.98 = .
+recode BMI 99.99 = .
+tab BMI
+generate BM1    = .
+replace  BM1    = 1 if (BMI < 18.5) 
+replace  BM1    = 2 if (BMI >= 18.5) & (BMI <25) 
+replace  BM1    = 3 if (BMI >= 25) 
+label define BM1 1 "Under" 2 "Normal" 3 "Over"
+svy: tab BM1
+tab BM1 ECDI_score, row
+svy: tab BM1 ECDI_score, row
+
+
+*Type of toilet facility.
+svy: tab WS11
+gen TF1=WS11
+recode TF1 11/23=1
+recode TF1 31/95=2
+recode TF1 96=3
+recode TF1 99=.
+label define TF1 1 "improved" 2 "unimproved" 3 "other"
+label values TF TF1
+svy: tab TF
+tab TF ECDI_score, row
+svy: tab TF ECDI_score, row
+
+*Early Childhood Education Program.
+svy: tab UB6
+gen ECEP1=UB6
+recode ECEP1 1=1
+recode ECEP1 2=2
+recode ECEP1 9=.
+label define ECEP1 1 "Yes" 2 "No"
+label values ECEP ECEP1
+svy: tab ECEP
+tab ECEP ECDI_score, row
+svy: tab ECEP ECDI_score, row
+
+*Mother Stimulation.
+tab EC5AA
+generate MS1    = 0
+replace  MS1    = 1 if (EC5AA == "A")
+replace  MS1    = 1 if (EC5BA == "A") 
+replace  MS1    = 1 if (EC5CA == "A") 
+replace  MS1    = 1 if (EC5DA == "A") 
+replace  MS1    = 1 if (EC5EA == "A") 
+replace  MS1    = 1 if (EC5FA == "A") 
+label define MS1 1 "Yes" 0 "No"
+svy: tab MS1
+tab MS1 ECDI_score, row
+svy: tab MS1 ECDI_score, row
+
+*Father Stimulation.
+generate FS1    = 0
+replace  FS1    = 1 if (EC5AB == "B") 
+replace  FS1    = 1 if (EC5BB == "B") 
+replace  FS1    = 1 if (EC5CB == "B")  
+replace  FS1    = 1 if (EC5DB == "B")  
+replace  FS1    = 1 if (EC5EB == "B")  
+replace  FS1    = 1 if (EC5FB == "B") 
+label define FS1 1 "Yes" 0 "No"
+svy: tab FS1
+tab FS1 ECDI_score, row
+svy: tab FS1 ECDI_score, row
+
+*Other Stimulation.
+generate OS1    = 0
+replace  OS1    = 1 if (EC5AX == "X") 
+replace  OS1    = 1 if (EC5BX == "X") 
+replace  OS1    = 1 if (EC5CX == "X")  
+replace  OS1    = 1 if (EC5DX == "X")  
+replace  OS1    = 1 if (EC5EX == "X")  
+replace  OS1    = 1 if (EC5FX == "X") 
+label define OS1 1 "Yes" 0 "No"
+svy: tab OS1
+tab OS1 ECDI_score, row
+svy: tab OS1 ECDI_score, row
+
+
+*Inadequate supervision.
+recode EC3A 8=.
+recode EC3A 9=.
+recode EC3B 8=.
+recode EC3B 9=.
+generate IS1    = .
+replace  IS1    = 0 if (EC3A == 0) 
+replace  IS1    = 1 if (EC3A == 1) 
+replace  IS1    = 1 if (EC3A == 2) 
+replace  IS1    = 1 if (EC3A == 3) 
+replace  IS1    = 1 if (EC3A == 4)
+replace  IS1    = 1 if (EC3A == 5)  
+replace  IS1    = 1 if (EC3A == 6) 
+replace  IS1    = 1 if (EC3A == 7)
+
+replace  IS1    = 0 if (EC3B == 0) 
+replace  IS1    = 1 if (EC3B == 1) 
+replace  IS1    = 1 if (EC3B == 2) 
+replace  IS1    = 1 if (EC3B == 3) 
+replace  IS1    = 1 if (EC3B == 4)
+replace  IS1    = 1 if (EC3B == 5)  
+replace  IS1    = 1 if (EC3B == 6) 
+replace  IS1    = 1 if (EC3B == 7)
+
+tab IS1
+label define IS1 1 "Yes" 0 "No"
+label values IS IS1
+svy: tab IS
+tab IS ECDI_score, row
+svy: tab IS ECDI_score, row
+
+*Salt Iodization.
+svy: tab SA1
+gen SI2=SA1
+recode SI2 1=0
+recode SI2 2=1
+recode SI2 3=1
+recode SI2 4=0
+recode SI2 6=0
+recode SI2 9=.
+label define SI2 0 "No" 1 "Yes"
+svy: tab SI2
+tab SI2 ECDI_score, row
+svy: tab SI2 ECDI_score, row
+
+*Books.
+svy: tab EC1
+gen Books1=EC1
+recode Books1 0=0
+recode Books1 1/10=1
+recode Books1 99=.
+label define Books1 0 "No" 1 "Yes"
+label values Books Books1
+svy: tab Books
+tab Books ECDI_score, row
+svy: tab Books ECDI_score, row
+
+*Toys.
+recode EC2A 8=.
+recode EC2A 9=.
+recode EC2B 8=.
+recode EC2B 9=.
+recode EC2C 8=.
+recode EC2C 9=.
+generate Toys1    = 2
+replace  Toys1    = 1 if (EC2A == 1) 
+replace  Toys1    = 2 if (EC2A == 2) 
+replace  Toys1    = 1 if (EC2B == 1)
+replace  Toys1    = 2 if (EC2B == 2)  
+replace  Toys1    = 1 if (EC2C == 1)  
+replace  Toys1    = 2 if (EC2C == 2) 
+label define Toys1 1 "Yes" 2 "No"
+label values Toys Toys1
+svy: tab Toys
+tab Toys ECDI_score, row
+svy: tab Toys ECDI_score, row
+
+*Mass Media.
+recode MT1 9=.
+recode MT2 9=.
+recode MT3 9=.
+generate MM1    = .
+replace  MM1    = 0 if (MT1 == 0) 
+replace  MM1    = 1 if (MT1 == 1) 
+replace  MM1    = 1 if (MT1 == 2) 
+replace  MM1    = 1 if (MT1 == 3) 
+replace  MM1    = 0 if (MT2 == 0)
+replace  MM1    = 1 if (MT2 == 1)  
+replace  MM1    = 1 if (MT2 == 2) 
+replace  MM1    = 1 if (MT2 == 3)
+replace  MM1    = 0 if (MT3 == 0)  
+replace  MM1    = 1 if (MT3 == 1) 
+replace  MM1    = 1 if (MT3 == 2) 
+replace  MM1    = 1 if (MT3 == 3)
+label define MM1 1 "Yes" 0 "No"
+label values MM MM1
+svy: tab MM
+tab MM ECDI_score, row
+svy: tab MM ECDI_score, row
+
+*Child Punishment.
+recode UCD2A 9 = .
+recode UCD2B 9 = .
+recode UCD2C 9 = .
+recode UCD2D 9 = .
+recode UCD2E 9 = .
+recode UCD2F 9 = .
+recode UCD2G 9 = .
+recode UCD2H 9 = .
+recode UCD2I 9 = .
+recode UCD2J 9 = .
+recode UCD2K 9 = .
+generate CPU1    = 2
+replace  CPU1    = 1 if (UCD2A == 1) 
+replace  CPU1    = 2 if (UCD2A == 2) 
+replace  CPU1    = 1 if (UCD2B == 1) 
+replace  CPU1    = 2 if (UCD2B == 2) 
+replace  CPU1    = 1 if (UCD2C == 1) 
+replace  CPU1    = 2 if (UCD2C == 2) 
+replace  CPU1    = 1 if (UCD2D == 1) 
+replace  CPU1    = 2 if (UCD2D == 2) 
+replace  CPU1    = 1 if (UCD2E == 1) 
+replace  CPU1    = 2 if (UCD2E == 2) 
+replace  CPU1    = 1 if (UCD2F == 1) 
+replace  CPU1    = 2 if (UCD2F == 2) 
+replace  CPU1    = 1 if (UCD2G == 1) 
+replace  CPU1    = 2 if (UCD2G == 2) 
+replace  CPU1    = 1 if (UCD2H == 1) 
+replace  CPU1    = 2 if (UCD2H == 2) 
+replace  CPU1    = 1 if (UCD2I == 1) 
+replace  CPU1    = 2 if (UCD2I == 2) 
+replace  CPU1    = 1 if (UCD2J == 1) 
+replace  CPU1    = 2 if (UCD2J == 2) 
+replace  CPU1    = 1 if (UCD2K == 1) 
+replace  CPU1    = 2 if (UCD2K == 2)  
+label define CPU1 1 "Yes" 2 "No"
+svy: tab CPU1
+tab CPU1 ECDI_score, row
+svy: tab CPU1 ECDI_score, row
+
+
+**********************************************************************
+* Stage A *** Compile parameters/inputs for Level-weights calculations
+**********************************************************************
+* a_c_h completed clusters by strata
+gen a_c_h=.
+quietly levelsof stratum, local(lstrata)
+quietly foreach ls of local lstrata {
+tab HH1 if stratum==`ls', matrow(T)
+scalar stemp=rowsof(T)
+replace a_c_h=stemp if stratum==`ls'
+}
+
+gen strata= 0
+replace strata = 1 if stratum == 10041
+replace strata = 1 if stratum == 10061
+replace strata = 1 if stratum == 10091
+replace strata = 1 if stratum == 10421
+replace strata = 1 if stratum == 10781
+replace strata = 1 if stratum == 10791
+
+replace strata = 2 if stratum == 10042
+replace strata = 2 if stratum == 10062
+replace strata = 2 if stratum == 10092
+replace strata = 2 if stratum == 10422
+replace strata = 2 if stratum == 10782
+replace strata = 2 if stratum == 10792
+
+replace strata = 3 if stratum == 20031
+replace strata = 3 if stratum == 20121
+replace strata = 3 if stratum == 20131
+replace strata = 3 if stratum == 20151
+replace strata = 3 if stratum == 20191
+replace strata = 3 if stratum == 20221
+replace strata = 3 if stratum == 20301
+replace strata = 3 if stratum == 20461
+replace strata = 3 if stratum == 20511
+replace strata = 3 if stratum == 20751
+replace strata = 3 if stratum == 20841
+
+replace strata = 4 if stratum == 20032
+replace strata = 4 if stratum == 20122
+replace strata = 4 if stratum == 20132
+replace strata = 4 if stratum == 20152
+replace strata = 4 if stratum == 20192
+replace strata = 4 if stratum == 20222
+replace strata = 4 if stratum == 20302
+replace strata = 4 if stratum == 20462
+replace strata = 4 if stratum == 20512
+replace strata = 4 if stratum == 20752
+replace strata = 4 if stratum == 20842
+
+replace strata = 5 if stratum == 30261
+replace strata = 5 if stratum == 30291
+replace strata = 5 if stratum == 30331
+replace strata = 5 if stratum == 30351
+replace strata = 5 if stratum == 30481
+replace strata = 5 if stratum == 30541
+replace strata = 5 if stratum == 30561
+replace strata = 5 if stratum == 30591
+replace strata = 5 if stratum == 30671
+replace strata = 5 if stratum == 30681
+replace strata = 5 if stratum == 30821
+replace strata = 5 if stratum == 30861
+replace strata = 5 if stratum == 30931
+
+
+replace strata = 6 if stratum == 30262
+replace strata = 6 if stratum == 30292
+replace strata = 6 if stratum == 30332
+replace strata = 6 if stratum == 30352
+replace strata = 6 if stratum == 30482
+replace strata = 6 if stratum == 30542
+replace strata = 6 if stratum == 30562
+replace strata = 6 if stratum == 30592
+replace strata = 6 if stratum == 30672
+replace strata = 6 if stratum == 30682
+replace strata = 6 if stratum == 30822
+replace strata = 6 if stratum == 30862
+replace strata = 6 if stratum == 30932
+
+replace strata = 7 if stratum == 40011
+replace strata = 7 if stratum == 40181
+replace strata = 7 if stratum == 40411
+replace strata = 7 if stratum == 40441
+replace strata = 7 if stratum == 40471
+replace strata = 7 if stratum == 40501
+replace strata = 7 if stratum == 40551
+replace strata = 7 if stratum == 40571
+replace strata = 7 if stratum == 40651
+replace strata = 7 if stratum == 40871
+
+replace strata = 8 if stratum == 40012
+replace strata = 8 if stratum == 40182
+replace strata = 8 if stratum == 40412
+replace strata = 8 if stratum == 40442
+replace strata = 8 if stratum == 40472
+replace strata = 8 if stratum == 40502
+replace strata = 8 if stratum == 40552
+replace strata = 8 if stratum == 40572
+replace strata = 8 if stratum == 40652
+replace strata = 8 if stratum == 40872
+
+replace strata = 9 if stratum == 45391
+replace strata = 9 if stratum == 45611
+replace strata = 9 if stratum == 45721
+replace strata = 9 if stratum == 45891
+
+replace strata = 10 if stratum == 45392
+replace strata = 10 if stratum == 45612
+replace strata = 10 if stratum == 45722
+replace strata = 10 if stratum == 45892
+
+replace strata = 11 if stratum == 50101
+replace strata = 11 if stratum == 50381
+replace strata = 11 if stratum == 50641
+replace strata = 11 if stratum == 50691
+replace strata = 11 if stratum == 50701
+replace strata = 11 if stratum == 50761
+replace strata = 11 if stratum == 50811
+replace strata = 11 if stratum == 50881
+
+
+replace strata = 12 if stratum == 50102
+replace strata = 12 if stratum == 50382
+replace strata = 12 if stratum == 50642
+replace strata = 12 if stratum == 50692
+replace strata = 12 if stratum == 50702
+replace strata = 12 if stratum == 50762
+replace strata = 12 if stratum == 50812
+replace strata = 12 if stratum == 50882
+
+replace strata = 13 if stratum == 55271
+replace strata = 13 if stratum == 55321
+replace strata = 13 if stratum == 55491
+replace strata = 13 if stratum == 55521
+replace strata = 13 if stratum == 55731
+replace strata = 13 if stratum == 55771
+replace strata = 13 if stratum == 55851
+replace strata = 13 if stratum == 55941
+
+replace strata = 14 if stratum == 55272
+replace strata = 14 if stratum == 55322
+replace strata = 14 if stratum == 55492
+replace strata = 14 if stratum == 55522
+replace strata = 14 if stratum == 55732
+replace strata = 14 if stratum == 55772
+replace strata = 14 if stratum == 55852
+replace strata = 14 if stratum == 55942
+
+replace strata = 15 if stratum == 60361
+replace strata = 15 if stratum == 60581
+replace strata = 15 if stratum == 60901
+replace strata = 15 if stratum == 60911
+
+replace strata = 16 if stratum == 60362
+replace strata = 16 if stratum == 60582
+replace strata = 16 if stratum == 60902
+replace strata = 16 if stratum == 60912
+
+* A_h total number of census clusters by strata
+gen A_h = 0
+replace A_h = 2688 if strata  == 1
+replace A_h = 14812 if strata  == 2
+replace A_h = 12241 if strata  == 3
+replace A_h = 40019 if strata  == 4
+replace A_h = 27922 if strata  == 5
+replace A_h = 45910 if strata  == 6
+replace A_h = 5646 if strata  == 7
+replace A_h = 27485 if strata  == 8
+replace A_h = 3105 if strata  == 9
+replace A_h = 20403 if strata  == 10
+replace A_h = 6599 if strata  == 11
+replace A_h = 34101 if strata  == 12
+replace A_h = 4273 if strata  == 13
+replace A_h = 29388 if strata  == 14
+replace A_h = 2719 if strata  == 15
+replace A_h = 16222 if strata  == 16
+
+tab strata
+
+
+* M_h average number of households per cluster by strata
+gen M_h = 0
+replace M_h = 47 if strata == 1
+replace M_h = 253 if strata == 2
+replace M_h = 139 if strata == 3
+replace M_h = 421 if strata == 4
+replace M_h = 188 if strata == 5
+replace M_h = 477 if strata == 6
+replace M_h = 85 if strata == 7
+replace M_h = 415 if strata == 8
+replace M_h = 28 if strata == 9
+replace M_h = 167 if strata == 10
+replace M_h = 69 if strata == 11
+replace M_h = 331 if strata == 12
+replace M_h = 49 if strata == 13
+replace M_h = 351 if strata == 14
+replace M_h = 29 if strata == 15
+replace M_h = 171 if strata == 16
+
+* m_c total number of completed households (added from the HR dataset)
+gen m_c= 64400
+* M total number of households in country
+gen M = 32144059
+* S_h households selected per stratum
+gen S_h = 20
+
+* Steps to approximate Level-1 and Level-2 weights from Household or Individual
+**********************************************************************
+* Stage B *** Approximate Level-weights ***
+**********************************************************************
+* Steps to approximate Level-1 and Level-2 weights from Household or Individual Weights
+*Step 1. De-normalize the final weight, using approximated normalization factor
+gen d_HH = wgt * (M/m_c)
+*Step 2. Approximate the Level-2 weight
+* f the variation factor
+gen f = d_HH / ((A_h/a_c_h) * (M_h/S_h))
+* Calculating the level-weights based on different values of alpha
+local alphas 0 0.1 .25 .50 .75 0.90 1
+local i = 1
+foreach dom of local alphas{
+gen wt2_`i' = (A_h/a_c_h)*(f^`dom')
+gen wt1_`i' = d_HH/wt2_`i'
+local ++i
+}
+
+*svyset using alpha 0.5
+svyset HH1, weight(wt2_4) strata(strata) , singleunit(centered) || _n, weight(wt1_4)
+
+
+
+********************************************************************************
+**Univariate Logistic regression
+********************************************************************************
+
+svy: melogit ECDI_score i.UB2, or
+svy: melogit ECDI_score i.HL4, or
+svy: melogit ECDI_score ib2.area, or
+svy: melogit ECDI_score i.HH7, or
+svy: melogit ECDI_score i.melevel, or
+svy: melogit ECDI_score i.windex5, or
+svy: melogit ECDI_score ib2.Religion, or
+svy: melogit ECDI_score ib2.HHSEX, or
+svy: melogit ECDI_score ib2.ethnicity, or
+svy: melogit ECDI_score ib3.WA2, or
+svy: melogit ECDI_score i.ED1, or
+svy: melogit ECDI_score i.underweight, or
+svy: melogit ECDI_score i.Stunned, or
+svy: melogit ECDI_score i.Wasted, or
+svy: melogit ECDI_score ib2.Overweight, or
+svy: melogit ECDI_score TF, or
+svy: melogit ECDI_score ib2.ECEP, or
+svy: melogit ECDI_score i.MS1, or
+svy: melogit ECDI_score ib0.FS1, or
+svy: melogit ECDI_score i.OS1, or
+svy: melogit ECDI_score ib1.IS, or
+svy: melogit ECDI_score ib1.SI, or
+svy: melogit ECDI_score i.Books, or
+svy: melogit ECDI_score i.Toys, or
+svy: melogit ECDI_score i.MM, or
+svy: melogit ECDI_score ib2.CPU1, or
+
+
+********************************************************************************
+**Multivariate Logistic regression
+********************************************************************************
+
+svy: melogit ECDI_score i.UB2 i.HL4 ib2.area i.HH7 i.melevel i.windex5  i.underweight i.Stunned ib2.ECEP i.MS1 ib0.FS1 ib1.IS i.Books ib2.CPU1, or
+
+
